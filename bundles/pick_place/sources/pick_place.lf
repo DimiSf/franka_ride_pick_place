@@ -1,16 +1,290 @@
-{
-  "name": "pick_place_demo",
-  "states": [
+documentation: "This Pick & Place app does the following:\n\
+- Move to pick_pose\n\
+- Close gripper\n\
+- Move to place_pose\n\
+- Open gripper\n\
+- Uses velocity and contact area safety\n\
+User parameters:\n\
+- pick_pose, place_pose\n\
+- gripper_open_width, gripper_closed_width\n\
+- velocity, speed, contact area\n\
+Use Franka Desk to teach and adjust values."
+
+PickPlaceApp {
+  port Success child("final_retract").port("success")
+  port Error child("approach").port("error") or
+             child("gripper_open").port("error") or
+             child("gripper_close").port("error") or
+             child("retract").port("error") or
+             child("transport").port("error") or
+             child("gripper_open_place").port("error") or
+             child("final_retract").port("error")
+
+  resultType {
+    string error_cause;
+  }
+
+  parameterType {
     {
-      "name": "move_to_pick",
-      "type": "cartesian_motion.GoTo",
-      "parameters": {
-        "pose": "parameter.pick_pose.pose"
-      }
-    },
+      [16]float pose;
+      []float joint_angles;
+    } approach;
     {
-      "name": "grip",
-      "type": "gripper.Grip"
-    }
-  ]
+      [16]float pose;
+      []float joint_angles;
+    } pick_pose;
+    {
+      [16]float pose;
+      []float joint_angles;
+    } place_approach;
+    {
+      [16]float pose;
+      []float joint_angles;
+    } place_pose;
+    float speed;
+    float velocity;
+    float gripper_open_width;
+    float gripper_closed_width;
+    {
+      float x;
+      float y;
+      float z;
+    } contact;
+  }
+
+  clientData {
+    type : "app";
+    name : "Pick & Place (Full App)";
+    color : "#B6E591";
+    requiredParameters: [{source: speed; localParameter: speed;}];
+    image : @{
+      <svg><use href="resources/icon.svg#icon"></use></svg>
+    }@;
+    contextMenu : @{
+      <step id="pick-motion" name="Pick Motion" class="flex-column">
+         <style>
+           .gripper { height: 95px; }
+           .pose-content { width: 130px; height: 107px; }
+           .object { height: 38px; margin-left: 1px; }
+         </style>
+         <div class="flex-row margin-bottom-60">
+           <step id="pick-approach" class="margin-right-60" name="Position above" label="Position the Hand above the object.">
+             <robot-pose params="
+               pose: parameter('approach'),
+               relatedPoses: {
+                 'pick-pose': parameter('pick_pose'),
+                 'pick-approach': parameter('approach')
+               },
+               step: step,
+               path: path,
+               componentProviderAPI: componentProviderAPI
+             ">
+               <div class="pose-content">
+                 <svg class="center-top gripper"><use href="resources/gripper_opened.svg#icon"></use></svg>
+               </div>
+             </robot-pose>
+           </step>
+           <step id="approach-width" name="Open fingers" label="Set width larger than object.">
+             <gripper-control params="width: parameter('gripper_open_width'), step: step"/>
+           </step>
+         </div>
+         <div class="flex-row">
+           <step id="pick-pose" class="margin-right-60" name="Pick position" label="Object between fingertips.">
+             <robot-pose params="
+               pose: parameter('pick_pose'),
+               reference: true,
+               relatedPoses: {
+                 'pick-pose': parameter('pick_pose'),
+                 'pick-approach': parameter('approach')
+               },
+               step: step,
+               path: path,
+               componentProviderAPI: componentProviderAPI
+             ">
+               <div class="pose-content" top="95px" left="65px">
+                 <svg class="center-bottom static-dark-gray visible object"><use href="resources/object.svg#icon"></use></svg>
+                 <svg class="center-top gripper"><use href="resources/gripper_holding.svg#icon"></use></svg>
+               </div>
+             </robot-pose>
+           </step>
+           <step id="pick-width" name="Close fingers" label="Firmly grasp the object.">
+             <gripper-control params="width: parameter('gripper_closed_width'), step: step"/>
+           </step>
+         </div>
+       </step>
+
+      <step id="place-motion" name="Place Motion" class="flex-column">
+        <style>
+          .gripper { height: 95px; }
+          .pose-content { width: 130px; height: 107px; }
+          .object { height: 38px; margin-left: 1px; }
+        </style>
+        <step id="place-approach" class="margin-right-60 margin-bottom-60" name="Position above" label="Above the target position.">
+          <robot-pose params="
+            pose: parameter('place_approach'),
+            relatedPoses: {
+              'place-pose': parameter('place_pose'),
+              'place-approach': parameter('place_approach')
+            },
+            step: step,
+            path: path,
+            componentProviderAPI: componentProviderAPI
+          ">
+            <div class="pose-content" top="95px" left="65px">
+              <svg class="center-bottom object"><use href="resources/object.svg#icon"></use></svg>
+              <svg class="center-top gripper"><use href="resources/gripper_holding.svg#icon"></use></svg>
+            </div>
+          </robot-pose>
+        </step>
+        <step id="place-pose" class="margin-right-60" name="Place position" label="Lower to place object.">
+          <robot-pose params="
+            pose: parameter('place_pose'),
+            reference: true,
+            relatedPoses: {
+              'place-pose': parameter('place_pose'),
+              'place-approach': parameter('place_approach')
+            },
+            step: step,
+            path: path,
+            componentProviderAPI: componentProviderAPI
+          ">
+            <div class="pose-content" top="95px" left="65px">
+              <svg class="center-bottom object"><use href="resources/object.svg#icon"></use></svg>
+              <svg class="center-top gripper"><use href="resources/gripper_holding.svg#icon"></use></svg>
+            </div>
+          </robot-pose>
+        </step>
+      </step>
+
+      <step id="collision" name="Collision" class="flex-column" label="Set the collision detection area.">
+        <h2 data-bind="text: step.label"></h2>
+        <toggle-slider params="
+          parameters: [
+            {value: parameter('contact.x').multiply(100).round(), label: 'Offset x', min: 0, max: 20, unit: 'cm'},
+            {value: parameter('contact.y').multiply(100).round(), label: 'Offset y', min: 0, max: 20, unit: 'cm'},
+            {value: parameter('contact.z').multiply(100).round(), label: 'Offset z', min: 0, max: 20, unit: 'cm'}
+          ],
+          step: step
+        "/>
+      </step>
+
+      <step id="velocity" name="Velocity" class="flex-column" label="Set the robot speed.">
+        <h2 data-bind="text: step.label"></h2>
+        <linear-slider params="
+          value: parameter('velocity').multiply(100),
+          min: 5, max: 100, increment: 5,
+          unit: '%',
+          step: step
+        "/>
+      </step>
+    }@;
+  }
+
+  --> compute_parameters <- merge_trajectory_and_kinematic_parameters {
+    port done -> compute_parameters_place
+  } where {
+    add_to_approach: true;
+    add_to_retract: false;
+    approach: [parameter.approach];
+    approach_end: parameter.pick_pose;
+    retract_start: parameter.pick_pose;
+    retract: [parameter.approach];
+    cartesian_velocity_factor_approach: parameter.velocity * parameter.speed;
+    cartesian_acceleration_factor_approach: 0.8 * parameter.velocity * parameter.speed;
+    cartesian_deceleration_factor_approach: 0.8 * parameter.velocity * parameter.speed;
+    cartesian_velocity_factor_ptp: parameter.velocity * parameter.speed;
+    cartesian_acceleration_factor_ptp: 0.8 * parameter.velocity * parameter.speed;
+    cartesian_deceleration_factor_ptp: 0.8 * parameter.velocity * parameter.speed;
+    cartesian_velocity_factor_retract: parameter.velocity * parameter.speed;
+    cartesian_acceleration_factor_retract: 0.8 * parameter.velocity * parameter.speed;
+    cartesian_deceleration_factor_retract: 0.8 * parameter.velocity * parameter.speed;
+  }
+
+  compute_parameters_place <- merge_trajectory_and_kinematic_parameters {
+    port done -> gripper_open
+  } where {
+    add_to_approach: true;
+    add_to_retract: false;
+    approach: [parameter.place_approach];
+    approach_end: parameter.place_pose;
+    retract_start: parameter.place_pose;
+    retract: [parameter.place_approach];
+    cartesian_velocity_factor_approach: parameter.velocity * parameter.speed;
+    cartesian_acceleration_factor_approach: 0.8 * parameter.velocity * parameter.speed;
+    cartesian_deceleration_factor_approach: 0.8 * parameter.velocity * parameter.speed;
+    cartesian_velocity_factor_ptp: parameter.velocity * parameter.speed;
+    cartesian_acceleration_factor_ptp: 0.8 * parameter.velocity * parameter.speed;
+    cartesian_deceleration_factor_ptp: 0.8 * parameter.velocity * parameter.speed;
+    cartesian_velocity_factor_retract: parameter.velocity * parameter.speed;
+    cartesian_acceleration_factor_retract: 0.8 * parameter.velocity * parameter.speed;
+    cartesian_deceleration_factor_retract: 0.8 * parameter.velocity * parameter.speed;
+  }
+
+  gripper_open <- gripper_move {
+    port success -> approach
+  } where {
+    width: parameter.gripper_open_width;
+    speed: 0.1;
+  }
+
+  approach <- move_via_with_move_configuration {
+    port success -> gripper_close
+  } where {
+    poses: child("compute_parameters").result.approach;
+  }
+
+  gripper_close <- grasp {
+    port success -> retract
+  } where {
+    width: parameter.gripper_closed_width;
+    speed: 0.1;
+    force: 20.0;
+  }
+
+  retract <- move_via_with_move_configuration {
+    port success -> transport
+  } where {
+    poses: child("compute_parameters").result.retract;
+  }
+
+  transport <- move_monitored {
+    port success -> gripper_open_place
+  } where {
+    poses: child("compute_parameters_place").result.approach;
+    contact: parameter.contact;
+  }
+
+  gripper_open_place <- gripper_move {
+    port success -> final_retract
+  } where {
+    width: parameter.gripper_open_width;
+    speed: 0.1;
+  }
+
+  final_retract <- move_via_with_move_configuration {
+  } where {
+    poses: child("compute_parameters_place").result.retract;
+  }
+
+  action child("gripper_open").port("error") @{ setResult({error_cause = child("gripper_open").result.error_cause}) }@
+  action child("approach").port("error") @{ setResult({error_cause = child("approach").result.error_cause}) }@
+  action child("retract").port("error") @{ setResult({error_cause = child("retract").result.error_cause}) }@
+  action child("gripper_close").port("error") @{ setResult({error_cause = child("gripper_close").result.error_cause}) }@
+  action child("transport").port("error") @{ setResult({error_cause = child("transport").result.error_cause}) }@
+  action child("gripper_open_place").port("error") @{ setResult({error_cause = child("gripper_open_place").result.error_cause}) }@
+  action child("final_retract").port("error") @{ setResult({error_cause = child("final_retract").result.error_cause}) }@
+} where {
+  approach: nil;
+  pick_pose: nil;
+  speed: nil;
+  velocity: nil;
+  gripper_open_width: nil;
+  gripper_closed_width: nil;
+  place_approach: nil;
+  place_pose: nil;
+  contact: {
+    x: 0.0;
+    y: 0.0;
+    z: 0.0;
+  };
 }
