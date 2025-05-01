@@ -1,0 +1,16 @@
+{
+  "name": "pick_place_demo",
+  "states": [
+    {
+      "name": "move_to_pick",
+      "type": "cartesian_motion.GoTo",
+      "parameters": {
+        "pose": "parameter.pick_pose.pose"
+      }
+    },
+    {
+      "name": "grip",
+      "type": "gripper.Grip"
+    }
+  ]
+}
