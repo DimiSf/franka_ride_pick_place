@@ -1,0 +1,6 @@
+HelloWorld {
+  port Success true
+  entry @{
+    printf("Hello from RIDE CLI!")
+  }@
+}
