@@ -1,4 +1,4 @@
-# Pick & Place App for Franka Emika R3 (Franka Desk / RIDE)
+# Pick & Place App for Franka Emika R3 (Franka Desk / RIDE) - UNDER DEVELOPMENT 
 
 This project contains a custom Pick & Place Desk App developed for the Franka Emika R3 robot using the **RIDE CLI** toolchain and the **Franka Desk** environment.
 
