@@ -107,14 +107,7 @@ During execution:
 
 ---
 
-## Future Ideas
-
-- Add a reference pose for `pick_approach` and `place_approach`
-- Enable contact detection or gripper force control
-- Expand to multiple object positions (via carousel)
-
----
 
 ## License
 
-This project is for academic and internal research use. Contact the author for licensing questions.
+This project is for academic and internal research use. Contact me for licensing questions.
