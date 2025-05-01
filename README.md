@@ -55,7 +55,7 @@ franka_ride_pick_place/
 3. Prepare your `.lf` logic and verify formatting. Do not compile remotely yet.
 
 ---
-
+https://franka.world/resources
 ## Setup in Lab (Once at Robot)
 
 1. Install `ride-cli` (only on lab PC):
