@@ -1,4 +1,4 @@
-# franka_ride_pick_place
+# franka_ride_pick_place - dont use its under development
 
  What Are RIDE Bundles?
 
