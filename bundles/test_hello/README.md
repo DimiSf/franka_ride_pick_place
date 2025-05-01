@@ -21,7 +21,7 @@ Run This Test in the Lab
 From your repo root:
 
 # 1. Log in to the robot
-ride login "<robot-ip>"
+ride login "robot-ip"
 
 # 2. Compile the test bundle
 ride bundle compile bundles/test_hello
