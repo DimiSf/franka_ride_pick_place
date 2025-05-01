@@ -1,6 +1,11 @@
 {
     "name": "pick_place",
     "version": "1.0",
-    "dependencies": ["cartesian_motion", "gripper"]
+    "dependencies": [
+      "cartesian_motion",
+      "gripper",
+      "common",
+      "pilot"
+    ]
   }
   
